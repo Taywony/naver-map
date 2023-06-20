@@ -9,11 +9,11 @@ const RADIO = [
 ];
 
 const Map = () => {
-  const mapElement = useRef(null);
   const [sgisData, setSgisData] = useState([]);
   const [accessToken, setAccessToken] = useState(null);
   const [selectedRadio, setSelectedRadio] = useState(RADIO[0].value);
-  const [polygonData, setPolygonData] = useState();
+  const [polygonData, setPolygonData] = useState([]);
+  const mapElement = useRef(null);
 
   //accessToken 받아올때 넣는 body 값
   const getAccessToken = {
@@ -43,10 +43,6 @@ const Map = () => {
       },
     };
     const map = new naver.maps.Map(mapElement.current, mapOptions);
-    // new naver.maps.Marker({
-    //   position: location,
-    //   map,
-    // });
 
     let polygon = new naver.maps.Polygon({
       map: map,
@@ -69,14 +65,16 @@ const Map = () => {
       strokeOpacity: 0.6,
       strokeWeight: 3,
     });
-  }, []);
+  }, [polygonData]);
 
   //polygon 좌표 가져오는 api
   useEffect(() => {
-    axios("/sido.json").then((res) => setPolygonData(res));
+    axios("/sido.json").then((res) => setPolygonData(res.data[4]));
   }, []);
 
-  console.log("polygonData", polygonData);
+  const polygonCoor = JSON.parse(polygonData.polygon);
+  const coordinates = Object.values(polygonCoor);
+  console.log(coordinates);
 
   //accessToken 받아오는 api
   useEffect(() => {
