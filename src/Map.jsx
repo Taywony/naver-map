@@ -1,22 +1,22 @@
-import axios from "axios";
 import React, { useEffect, useRef, useState } from "react";
+import Select from "./Select";
+import axios from "axios";
+import "./Map.css";
 
 const Map = () => {
   const mapElement = useRef(null);
   const [sgisData, setSgisData] = useState([]);
-  const [accessToken, setAccessToken] = useState("");
+  const [accessToken, setAccessToken] = useState({});
 
   const getAccessToken = {
     consumer_key: "9f5563a0ece544ddb338",
     consumer_secret: "dd29974fa87640b59235",
   };
 
-  const getData = {
+  const getSido = {
     accessToken: accessToken,
     // cd: "24",
   };
-
-  console.log(sgisData);
 
   useEffect(() => {
     const { naver } = window;
@@ -29,7 +29,7 @@ const Map = () => {
       zoom: 17,
       zoomControl: true,
       zoomControlOptions: {
-        position: naver.maps.Position.TOP_RIGHT,
+        position: naver.maps.Position.BOTTOM_RIGHT,
       },
     };
     const map = new naver.maps.Map(mapElement.current, mapOptions);
@@ -44,25 +44,28 @@ const Map = () => {
       .get("https://sgisapi.kostat.go.kr/OpenAPI3/auth/authentication.json", {
         params: getAccessToken,
       })
-      .then((res) => {
-        setAccessToken(res.data.result.accessToken);
-      });
+      .then((res) => console.log(res));
   }, []);
 
   useEffect(() => {
-    axios
-      .get("https://sgisapi.kostat.go.kr/OpenAPI3/addr/stage.json", {
-        params: getData,
-      })
+    axios("https://sgisapi.kostat.go.kr/OpenAPI3/addr/stage.json", {
+      params: getSido,
+    })
       .then((res) => {
         setSgisData(res.data);
       })
       .catch((error) => {
         console.error("에러에러:", error);
       });
-  }, [accessToken]);
+  }, []);
 
-  return <div ref={mapElement} style={{ minHeight: "100vh" }} />;
+  console.log(accessToken);
+
+  return (
+    <div className="view" ref={mapElement} style={{ minHeight: "100vh" }}>
+      {sgisData.errMsg === "Success" && <Select sidoData={sgisData.result} />}
+    </div>
+  );
 };
 
 export default Map;
