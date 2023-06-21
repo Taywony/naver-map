@@ -36,8 +36,9 @@
 
 .sidoBox {
   position: fixed;
-  top: -260%;
-  left: -35%;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   width: 600px;
 }
@@ -49,7 +50,6 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  height: 120px;
   flex-wrap: wrap;
 }
 

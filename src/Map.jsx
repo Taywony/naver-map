@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useRecoilState, useRecoilValue } from "recoil";
+import { selectState } from "./recoil/select";
+import polygonData from "./sido.json";
 import axios from "axios";
 import "./Map.css";
-import { useRecoilState } from "recoil";
-import { selectState } from "./recoil/select";
 
 const RADIO = [
   { id: "select1", title: "select", value: "first" },
@@ -15,12 +16,12 @@ const Map = () => {
   const [sgisData, setSgisData] = useState([]);
   const [accessToken, setAccessToken] = useState(null);
   const [selectedRadio, setSelectedRadio] = useState(RADIO[0].value);
-  const [polygonData, setPolygonData] = useState([]);
   const [select, setSelect] = useRecoilState(selectState);
   const pickSido = [...select.selectSido];
   const mapElement = useRef(null);
 
   //accessToken 받아올때 넣는 body 값
+  //env 파일로 관리
   const getAccessToken = {
     consumer_key: "9f5563a0ece544ddb338",
     consumer_secret: "dd29974fa87640b59235",
@@ -29,13 +30,7 @@ const Map = () => {
   // 시/도 리스트 받아올대 넣는 body 값
   const getSido = {
     accessToken: accessToken,
-    // cd: "24",
   };
-
-  //polygon 좌표 가져오는 api
-  useEffect(() => {
-    axios("/sido.json").then((res) => setPolygonData(res.data));
-  }, []);
 
   //accessToken 받아오는 api
   useEffect(() => {
@@ -66,7 +61,7 @@ const Map = () => {
     if (!mapElement.current || !naver) return;
 
     // 지도에 표시할 위치의 위도와 경도 좌표를 파라미터로 넣기
-    const location = new naver.maps.LatLng(37.5682, 126.8973);
+    // const location = new naver.maps.LatLng(37.5682, 126.8973);
     const mapOptions = {
       center: new naver.maps.LatLng(35.5, 127.4), //초기값 전체지도 보이게
       zoom: 7,
@@ -75,32 +70,43 @@ const Map = () => {
         position: naver.maps.Position.TOP_RIGHT,
       },
     };
+
+    // data 구조 파악
     const map = new naver.maps.Map(mapElement.current, mapOptions);
 
-    // console.log("픽한거 가져오기", select.selectSido);
+    console.log("픽한 cd", select.selectSido[select.selectTab]);
+    console.log("픽한 tap", select.selectTab);
 
-    // // 인천, 전남 좌표값 제대로 가져오기
+    // // 인천, 전남 일때 좌표값 한번 더 가공하기
     // console.log("서울", polygonData[0].polygon);
     // console.log("인천", polygonData[3].polygon);
 
     const getCoordinates = polygonData.length
-      ? JSON.parse(polygonData[3]?.polygon)
+      ? polygonData.length > 1
+        ? JSON.parse(polygonData[15]?.polygon)
+        : polygonData.forEach((element) => {
+            JSON.parse(element.polygon);
+          })
       : [];
 
     const coordinates = Object.values(getCoordinates);
+    // console.log(coordinates);
 
     let polygon = new naver.maps.Polygon({
       map: map,
       paths: [
         coordinates.map((item) => new naver.maps.LatLng(item[1], item[0])),
       ],
-      fillColor: "#ff0000",
+      fillColor: "#268eff",
       fillOpacity: 0.3,
-      strokeColor: "#ff0000",
+      strokeColor: "#268eff",
       strokeOpacity: 0.6,
       strokeWeight: 3,
     });
-  }, [polygonData]);
+
+    // 이벤트 넣어주고 ref에 새로 넣기
+    // current 초기값은 배열
+  }, [select]);
 
   console.log("polygonData", polygonData);
   console.log("select", select);
@@ -148,7 +154,9 @@ const Map = () => {
                             value={addr_name}
                             onClick={() => {
                               pickSido[select.selectTab] = cd;
-                              setSelect({ ...select, selectSido: pickSido });
+                              setSelect((prev) => {
+                                return { ...select, selectSido: pickSido };
+                              });
                             }}
                           />
                           <span>{addr_name}</span>
