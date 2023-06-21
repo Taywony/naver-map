@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
 import "./Map.css";
+import { useRecoilState } from "recoil";
+import { selectState } from "./recoil/select";
 
 const RADIO = [
   { id: "select1", title: "select", value: "first" },
@@ -13,6 +16,8 @@ const Map = () => {
   const [accessToken, setAccessToken] = useState(null);
   const [selectedRadio, setSelectedRadio] = useState(RADIO[0].value);
   const [polygonData, setPolygonData] = useState([]);
+  const [select, setSelect] = useRecoilState(selectState);
+  const pickSido = [...select.selectSido];
   const mapElement = useRef(null);
 
   //accessToken 받아올때 넣는 body 값
@@ -27,54 +32,10 @@ const Map = () => {
     // cd: "24",
   };
 
-  // naver map 표시
-  useEffect(() => {
-    const { naver } = window;
-    if (!mapElement.current || !naver) return;
-
-    // 지도에 표시할 위치의 위도와 경도 좌표를 파라미터로 넣어줍니다.
-    const location = new naver.maps.LatLng(37.5682, 126.8973);
-    const mapOptions = {
-      center: new naver.maps.LatLng(35.5, 127.4), //초기값 전체지도 보이게
-      zoom: 7,
-      zoomControl: true,
-      zoomControlOptions: {
-        position: naver.maps.Position.TOP_RIGHT,
-      },
-    };
-    const map = new naver.maps.Map(mapElement.current, mapOptions);
-
-    let polygon = new naver.maps.Polygon({
-      map: map,
-      paths: [
-        [
-          new naver.maps.LatLng(37.37544345085402, 127.11224555969238),
-          new naver.maps.LatLng(37.37230584065902, 127.10791110992432),
-          new naver.maps.LatLng(37.35975408751081, 127.10795402526855),
-          new naver.maps.LatLng(37.359924641705476, 127.11576461791992),
-          new naver.maps.LatLng(37.35931064479073, 127.12211608886719),
-          new naver.maps.LatLng(37.36043630196386, 127.12293148040771),
-          new naver.maps.LatLng(37.36354029942161, 127.12310314178465),
-          new naver.maps.LatLng(37.365211629488016, 127.12456226348876),
-          new naver.maps.LatLng(37.37544345085402, 127.11224555969238),
-        ],
-      ],
-      fillColor: "#ff0000",
-      fillOpacity: 0.3,
-      strokeColor: "#ff0000",
-      strokeOpacity: 0.6,
-      strokeWeight: 3,
-    });
-  }, [polygonData]);
-
   //polygon 좌표 가져오는 api
   useEffect(() => {
-    axios("/sido.json").then((res) => setPolygonData(res.data[4]));
+    axios("/sido.json").then((res) => setPolygonData(res.data));
   }, []);
-
-  const polygonCoor = JSON.parse(polygonData.polygon);
-  const coordinates = Object.values(polygonCoor);
-  console.log(coordinates);
 
   //accessToken 받아오는 api
   useEffect(() => {
@@ -99,7 +60,51 @@ const Map = () => {
         });
   }, [accessToken]);
 
-  console.log("sgisData", sgisData);
+  // naver map 표시
+  useEffect(() => {
+    const { naver } = window;
+    if (!mapElement.current || !naver) return;
+
+    // 지도에 표시할 위치의 위도와 경도 좌표를 파라미터로 넣기
+    const location = new naver.maps.LatLng(37.5682, 126.8973);
+    const mapOptions = {
+      center: new naver.maps.LatLng(35.5, 127.4), //초기값 전체지도 보이게
+      zoom: 7,
+      zoomControl: true,
+      zoomControlOptions: {
+        position: naver.maps.Position.TOP_RIGHT,
+      },
+    };
+    const map = new naver.maps.Map(mapElement.current, mapOptions);
+
+    // console.log("픽한거 가져오기", select.selectSido);
+
+    // // 인천, 전남 좌표값 제대로 가져오기
+    // console.log("서울", polygonData[0].polygon);
+    // console.log("인천", polygonData[3].polygon);
+
+    const getCoordinates = polygonData.length
+      ? JSON.parse(polygonData[3]?.polygon)
+      : [];
+
+    const coordinates = Object.values(getCoordinates);
+
+    let polygon = new naver.maps.Polygon({
+      map: map,
+      paths: [
+        coordinates.map((item) => new naver.maps.LatLng(item[1], item[0])),
+      ],
+      fillColor: "#ff0000",
+      fillOpacity: 0.3,
+      strokeColor: "#ff0000",
+      strokeOpacity: 0.6,
+      strokeWeight: 3,
+    });
+  }, [polygonData]);
+
+  console.log("polygonData", polygonData);
+  console.log("select", select);
+  console.log("pickSido", pickSido);
 
   console.log("------------------------------------------");
   return (
@@ -110,7 +115,7 @@ const Map = () => {
         style={{ minHeight: "100vh" }}
       ></div>
       <div className="radiobox">
-        {RADIO.map(({ id, title, value }) => {
+        {RADIO.map(({ id, title, value }, index) => {
           return (
             <div className="selectBox" key={id}>
               <div className="selector">
@@ -120,10 +125,11 @@ const Map = () => {
                   id={id}
                   name={title}
                   value={value}
-                  defaultChecked={value === "first"}
+                  checked={select.selectTab === index}
                   onChange={() => {
                     setSelectedRadio(value);
                   }}
+                  onClick={() => setSelect({ ...select, selectTab: index })}
                 />
                 <label htmlFor={id}>{value}</label>
               </div>
@@ -140,6 +146,10 @@ const Map = () => {
                             id="sido"
                             name="sido"
                             value={addr_name}
+                            onClick={() => {
+                              pickSido[select.selectTab] = cd;
+                              setSelect({ ...select, selectSido: pickSido });
+                            }}
                           />
                           <span>{addr_name}</span>
                         </label>
@@ -152,6 +162,9 @@ const Map = () => {
           );
         })}
       </div>
+      <Link to="/sub" className="toSub">
+        이동
+      </Link>
     </div>
   );
 };
